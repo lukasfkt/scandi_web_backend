@@ -1,0 +1,15 @@
+{
+  "name": "lucas/scandiweb_test_assignment_lucas",
+  "autoload": {
+    "psr-4": {
+      "ScandiwebApp\\": "src/"
+    }
+  },
+  "authors": [
+    {
+      "name": "Lucas Tanaka",
+      "email": "lucasfktanaka@gmail.com"
+    }
+  ],
+  "require": {}
+}
