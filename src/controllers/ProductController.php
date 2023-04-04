@@ -2,23 +2,24 @@
 
 namespace ScandiwebApp\controllers;
 
-use ScandiwebApp\classes\Book;
-use ScandiwebApp\classes\DVD;
-use ScandiwebApp\classes\Furniture;
-use ScandiwebApp\classes\Product;
+use Reflection;
+use ReflectionClass;
+use ScandiwebApp\models\Book;
+use ScandiwebApp\models\DVD;
+use ScandiwebApp\models\Furniture;
+use ScandiwebApp\repository\ProductRepository;
 
 class ProductController
 {
-
-    public function getProducts(): void
+    public function getProducts(ProductRepository $productRepository): void
     {
-        $products = Product::getAll();
+        $products = $productRepository->getAll();
         $productsJSON = json_encode($products);
         echo $productsJSON;
         return;
     }
 
-    public function saveProduct()
+    public function saveProduct(ProductRepository $productRepository)
     {
         $payload = json_decode(file_get_contents("php://input"), true);
         if (!$payload['name'] || !$payload['sku'] || !$payload['price'] || !$payload['productType']) {
@@ -26,57 +27,38 @@ class ProductController
             http_response_code(400);
             exit();
         }
-        switch ($payload['productType']) {
-            case 'dvd':
-                if (!isset($payload['size'])) {
-                    echo "Size field is missing";
-                    http_response_code(400);
-                    exit();
-                }
-                $dvd = new DVD($payload);
-                if ($dvd->save()) {
-                    http_response_code(201);
-                    exit();
-                }
-                break;
-            case 'furniture':
-                if (!isset($payload['height']) || !isset($payload['width']) || !isset($payload['length'])) {
-                    echo "The height, width and length fields are missing";
-                    http_response_code(400);
-                    exit();
-                }
-                $furniture = new Furniture($payload);
-                if ($furniture->save()) {
-                    http_response_code(201);
-                    exit();
-                }
-                break;
-            case 'book':
-                if (!isset($payload['weight'])) {
-                    echo "Weight field is missing";
-                    http_response_code(400);
-                    exit();
-                }
-                $book = new Book($payload);
-                if ($book->save()) {
-                    http_response_code(201);
-                    exit();
-                }
-                break;
+
+        if (!$productRepository->verifySKU($payload['sku'])) {
+            echo "There is already a product with this sku";
+            http_response_code(400);
+            exit();
         }
-        echo "There is already a product with this sku";
-        http_response_code(400);
+
+        $productsModelsMap = array(
+            'dvd' => function ($payload) {
+                return new DVD($payload);
+            },
+            'furniture' => function ($payload) {
+                return new Furniture($payload);
+            },
+            'book' => function ($payload) {
+                return new Book($payload);
+            }
+        );
+        $objectToSave = $productsModelsMap[$payload['productType']]($payload);
+        $productRepository->save($objectToSave);
+        http_response_code(201);
         exit();
     }
 
-    public function deleteProducts()
+    public function deleteProducts(ProductRepository $productRepository)
     {
         $payload = json_decode(file_get_contents("php://input"), true);
         if (!$payload['ids']) {
             http_response_code(400);
             exit();
         }
-        if (Product::delete($payload['ids'])) {
+        if ($productRepository->delete($payload['ids'])) {
             http_response_code(200);
             exit();
         };

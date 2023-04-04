@@ -1,4 +1,7 @@
 <?php
+
+use ScandiwebApp\repository\ProductRepository;
+
 include_once('./db/initialize.php');
 require "./vendor/autoload.php";
 require "./routes/router.php";
@@ -27,6 +30,7 @@ function cors()
 }
 
 try {
+    $productRepository = new ProductRepository($database);
     $uri = parse_url($_SERVER["REQUEST_URI"])["path"];
     $request = $_SERVER["REQUEST_METHOD"];
     cors();
@@ -41,8 +45,7 @@ try {
         exit;
     }
 
-    $controller = $routes[$request][$uri];
-    $controller();
+    $controller = $routes[$request][$uri]($productRepository);
 } catch (Exception $e) {
     $e->getMessage();
 }
